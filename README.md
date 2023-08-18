@@ -6,7 +6,7 @@ Curbside parking occupancy prediction is an important aspect of parking manageme
 The problem of finding the most meaningful blocks to train a model can treated as a type of multi-armed bandit problem. A collection of blocks can be cluster into groups with similar occupancy characteristics and each cluster can be considered as a machine. Each machine would give the model one data point from the corresponding blocks cluster to train. The goal of the model agent is to maximize the prediction accuracy on a separate testing data. One solution is to represent the entire block clusters system as a Markov Decision Process, where each state is a combination of blocks from all the different clusters. The action is therefore adding and removing block from each of the clusters. The optimal solution can be found using Q-learning algorithm. After training, the resulting combination of blocks state will tell us which clusters is more impactful in improving the model accuracy.
 
 ## Implementation
-The parking occupancy data used is gathered and processed from Seattle Department of Transportation (SDOT). The naive and ground truth data consist of 12 different blocks around Seattle, where each block has data collected for 7 day (03/21/22 - 03/26/22 + 03/28/22) from 8am to 8pm with a time interval of 1 minute. In total there are 84 whole day of parking occupancy data from 8am to 8pm across the 12 blocks and 7 days for each block. The data is split into a training and testing set where there are 72 whole day of training and 12 whole day of testing data.
+The parking occupancy data used is gathered and processed from Seattle Department of Transportation (SDOT). The naive and ground truth data consist of 12 different blocks around Seattle, where each block has data collected for 7 day (03/21/22 - 03/26/22 + 03/28/22) from 8am to 8pm with a time interval of 1 minute. In total there are 84 whole day of parking occupancy data from 8am to 8pm across the 12 blocks and 7 days for each block. The data is split into a training and testing set where there are 72 whole day of training and 12 whole day of testing data. The occupancy data is normalized as an occupancy percentage based on the max parking capacity of each individual blocks.
 
 The base predictive model used is a ridge regression with a radial basis function kernel. This particular model is chosen because it is simple to train with little data points, while still having decent accuracy. The sklearn kernel_ridge package is used to implement the model with lambda value of 0.01 and gamma value of 0.001.  The accuracy is computed using the mean absolute error:
 
@@ -31,4 +31,31 @@ $$ sample = R(s,a,s') + \gamma \max\limits_{a'} Q(s',a') \quad \quad [1] $$
 
 $$ Q(s,a) = (1-\alpha)Q(s,a) + \alpha (sample) \quad \quad [2] $$
 
-In order to encourage exploration, an epsilon greedy function is used to incorporate a possibility of a random action taken by the model. There is a probablity of $\epsilon$ to perform a random action based on the current state and there is a probablity of $1-\epsilon$ of acting based on the current policy. The default $\epsilon$ value used is 0.5.
+In order to encourage exploration, an epsilon greedy function is used to incorporate a possibility of a random action taken by the model. There is a probablity of $\epsilon$ to perform a random action based on the current state and there is a probablity of $1-\epsilon$ of acting based on the current policy. The default $\epsilon$ value used is 0.5 to encourage exploration because the only big reward is at the goal states.
+
+## Result
+The Q-learning algorithm is ran for 10,000,000 iterations with a goal state of 24 samples which take about 2 minutes and 30 seconds to run. Then the 3 top bins in term of number of sample from the solution are used to train the occupancy model and test on the testing data. Likewise, the bottom 3 bins are used to train the occupancy model and test on the testing data. The number of top bins to chose from is arbitary chosen and 3 is a middle cut off in the case with 6 total bins. In addition, the accuracy of the occupancy prediction when the model trained on all the training data and the accuracy of the naive occupancy are computed for reference. The amount of avaliable data is limited, therefore testing different split of the data is necessary to see if this impact the solution. The results from varying the random_state of the train_test_split function from sklearn, while keeping K-mean random state the same is shown in Table I.
+
+| Split Random State | Full Training Accuracy | Naive Occupancy Accuracy | Top 3 Bins Accuracy | Bottom 3 Bins Accuracy | Bin Distribution | 
+| --- | --- | --- | --- | --- | --- |
+| 10 | 87.71% | 59.96% | 87.35% [1, 5, 2] | 73.36% [0, 3, 4] | [20, 14, 15, 2, 10, 11] |
+| 50 | 82.92% | 66.08% | 81.13% [0, 1, 2] | 78.03% [3, 4, 5] | [7, 11, 19, 16, 6, 13] |
+| 99 | 86.50% | 66.08% | 77.38% [4, 2, 0] | 81.36% [1, 3, 5] | [11, 14, 13, 20, 11, 3] |
+| 42 | 88.50% | 71.60% | 83.26% [0, 4, 1] | 75.53% [2, 3, 5] | [15, 6, 12, 12, 21, 6] |
+| 17 | 85.67% | 80.07% | 76.37% [4, 2, 3] | 78.89% [0, 1, 5] | [5, 24, 14, 7, 13, 9] |
+<p align="center">
+  Table I. Accuracy Results from Varying Split (goal state of 24 samples & 6 bins)
+</p>
+
+Based on the result from Table I, the Markov Decision Process method performance heavily relies on how the data is split. The random states of 10, 50 and 42 result in a higher top 3 bins accuracy than bottom 3 bins, the top 3 bins accuracy is relatively close to the full training accuracy except for random state 42. Perform a similar test as above, but instead change the goal state to 36, the number of iteration to 20,000,000 and the number of bins to 4. The results from changiner the goal state and number of bins is shown in Table II.
+
+| Split Random State | Full Training Accuracy | Naive Occupancy Accuracy | Top 2 Bins Accuracy | Bottom 2 Bins Accuracy | Bin Distribution | 
+| --- | --- | --- | --- | --- | --- |
+| 10 | 87.71% | 59.96% | 88.41% [0, 2] | 77.67% [1, 3] | [29, 16, 15 ,12] |
+| 50 | 82.92% | 66.08% | 81.96% [1, 0] | 77.82% [2, 3] | [18, 16, 19 ,19] |
+| 99 | 86.50% | 66.08% | 81.96% [1, 0] | 77.82% [2, 3] | [15, 13, 19 ,25] |
+
+<p align="center">
+  Table I. Accuracy Results from Varying Split (goal state of 36 samples & 4 bins)
+</p>
+
