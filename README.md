@@ -33,29 +33,37 @@ $$ Q(s,a) = (1-\alpha)Q(s,a) + \alpha (sample) \quad \quad [2] $$
 
 In order to encourage exploration, an epsilon greedy function is used to incorporate a possibility of a random action taken by the model. There is a probablity of $\epsilon$ to perform a random action based on the current state and there is a probablity of $1-\epsilon$ of acting based on the current policy. The default $\epsilon$ value used is 0.5 to encourage exploration because the only big reward is at the goal states.
 
-## Result
-The Q-learning algorithm is ran for 10,000,000 iterations with a goal state of 24 samples which take about 2 minutes and 30 seconds to run. Then the 3 top bins in term of number of sample from the solution are used to train the occupancy model and test on the testing data. Likewise, the bottom 3 bins are used to train the occupancy model and test on the testing data. The number of top bins to chose from is arbitary chosen and 3 is a middle cut off in the case with 6 total bins. In addition, the accuracy of the occupancy prediction when the model trained on all the training data and the accuracy of the naive occupancy are computed for reference. The amount of avaliable data is limited, therefore testing different split of the data is necessary to see if this impact the solution. The results from varying the random_state of the train_test_split function from sklearn, while keeping K-mean random state the same is shown in Table I.
+Then the solution bins distribution is used to create a pool of data to train the occupancy model. For each solution bin the number of samples determines the number of sample randomly drawn from the corresponding total bin. The solution occupancy model accuracy therefore will vary depending on the sample drawn from each of the total bins. This method of applying the solution bins distribution take into account the variation in the model accuracy contributed by a sample in each bin. Apply the distribution to the training pool based on the solution bins for 1000 iteration and compute the mean, max and min of the resulting occupancy model. The resulting mean accuracy respresent the the likely accuracy of the occupancy model when the training data follow similar distribution to the solution bins.
 
-| Split Random State | Full Training Accuracy | Naive Occupancy Accuracy | Top 3 Bins Accuracy | Bottom 3 Bins Accuracy | Bin Distribution | 
-| --- | --- | --- | --- | --- | --- |
-| 10 | 87.71% | 59.96% | 87.35% [1, 5, 2] | 73.36% [0, 3, 4] | [20, 14, 15, 2, 10, 11] |
-| 50 | 82.92% | 66.08% | 81.13% [0, 1, 2] | 78.03% [3, 4, 5] | [7, 11, 19, 16, 6, 13] |
-| 99 | 86.50% | 66.08% | 77.38% [4, 2, 0] | 81.36% [1, 3, 5] | [11, 14, 13, 20, 11, 3] |
-| 42 | 88.50% | 71.60% | 83.26% [0, 4, 1] | 75.53% [2, 3, 5] | [15, 6, 12, 12, 21, 6] |
-| 17 | 85.67% | 80.07% | 76.37% [4, 2, 3] | 78.89% [0, 1, 5] | [5, 24, 14, 7, 13, 9] |
+## Result
+The Q-learning algorithm is ran for 10,000,000 iterations with a goal state of 24 samples which take about 3 minutes and 20 seconds to run. However, the amount of avaliable data is limited, therefore testing different split of the data is necessary to see if this impact the solution. The results from varying the random_state of the train_test_split function from sklearn, while keeping K-mean random state the same is shown in Table I.
+
+| Split Random State | Full Training Accuracy | Naive Occupancy Accuracy | Solution Average Accuracy | Solution Max Accuracy | Solution Min Accuracy | Total Bins Distribution | Solution Bins Distribution |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 10 | 87.71% | 59.96% | 85.05% | 90.13% | 70.53% | [20, 14, 15, 2, 10, 11] | [5, 7, 5, 2, 0, 5] |
+| 50 | 82.92% | 66.08% | 81.98% | 84.43% | 72.13% | [7, 11, 19, 16, 6, 13] | [7, 5, 2, 6, 4, 0] |
+| 99 | 86.50% | 66.08% | 84.27% | 87.07% | 78.39% | [11, 14, 13, 20, 11, 3] | [5, 2, 6, 3, 6, 2] |
+| 42 | 88.50% | 71.60% | 87.17% | 89.59% | 81.23% | [15, 6, 12, 12, 21, 6] | [10, 5, 4, 1, 4, 0] |
+| 17 | 85.67% | 80.07% | 83.44% | 89.73% | 70.02% | [5, 24, 14, 7, 13, 9] | [5, 1, 6, 4, 6, 1] |
 <p align="center">
   Table I. Accuracy Results from Varying Split (goal state of 24 samples & 6 bins)
 </p>
 
-Based on the result from Table I, the Markov Decision Process method performance heavily relies on how the data is split. The random states of 10, 50 and 42 result in a higher top 3 bins accuracy than bottom 3 bins, the top 3 bins accuracy is relatively close to the full training accuracy except for random state 42. Perform a similar test as above, but instead change the goal state to 36, the number of iteration to 20,000,000 and the number of bins to 4. The results from changiner the goal state and number of bins is shown in Table II.
+Based on the result from Table I, the way the data is split does have a noticeable effect on the occupancy model accuracy and the accuracy of the solution. However, the Markov Decision Process method solution mean accuracy only have a 1-3% difference from the full training accuracy across different data split. In the case for random state 10, 50 and 42, the solution bins distribution eliminate bin 5, 6 and 6 respectively with only a 1-2% drop in accuracy. Perform a similar test as above, but instead change the goal state to 36 and the number of bins to 4 to see the effect of reducing the amount of bins and increasing goal state sample. The results from changing the goal state and number of bins is shown in Table II.
 
-| Split Random State | Full Training Accuracy | Naive Occupancy Accuracy | Top 2 Bins Accuracy | Bottom 2 Bins Accuracy | Bin Distribution | 
-| --- | --- | --- | --- | --- | --- |
-| 10 | 87.71% | 59.96% | 88.41% [0, 2] | 77.67% [1, 3] | [29, 16, 15 ,12] |
-| 50 | 82.92% | 66.08% | 81.96% [1, 0] | 77.82% [2, 3] | [18, 16, 19 ,19] |
-| 99 | 86.50% | 66.08% | 81.96% [1, 0] | 77.82% [2, 3] | [15, 13, 19 ,25] |
+| Split Random State | Full Training Accuracy | Naive Occupancy Accuracy | Solution Average Accuracy | Solution Max Accuracy | Solution Min Accuracy | Total Bins Distribution | Solution Bins Distribution |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 10 | 87.71% | 59.96% | 83.63% | 90.05% | 71.68% | [29, 16, 15 ,12] | [18, 5, 11, 2] |
+| 50 | 82.92% | 66.08% | 82.50% | 84.80% | 78.78% | [18, 16, 19 ,19] | [14, 15, 7, 0] |
+| 99 | 86.50% | 66.08% | 84.72% | 87.14% | 79.23% | [15, 13, 19 ,25] | [10, 13, 10 3] |
+| 42 | 88.50% | 71.60% | 87.66% | 90.12% | 80.90% | [16, 24, 13, 19] | [11, 6, 13, 6] |
+| 17 | 85.67% | 80.07% | 81.01% | 88.64% | 71.02% | [5, 29, 24, 14] | [1, 26, 2, 7] |
 
 <p align="center">
-  Table I. Accuracy Results from Varying Split (goal state of 36 samples & 4 bins)
+  Table II. Accuracy Results from Varying Split (goal state of 36 samples & 4 bins)
 </p>
+
+Similar to the result from Table I, how the data is split influences the accuracy even more so in this case where the difference between the full training and soluion accuracy is up to 4%. It is expected to have varying results due to the fact that the dataset used is very small and certain partition can have great effect. However, there seem to be no significant difference between using 4 bins and 6 bins. Another important part of this method is the K-mean clustering which could result in different grouping of data samples. Preform a similar test as previously but fix the data split random state and instead vary the K-mean random initial state. The results from varying the random initial state of the K-mean function from sklearne is shown in Table III.
+
+
 
