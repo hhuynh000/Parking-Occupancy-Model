@@ -13,10 +13,10 @@ class BanditMDP:
         train_data - tuple of array containing X and Y testing data
         max_bins - list of the total data points for each cluster
     """
-    def __init__(self, train_data, test_data, max_bins):
+    def __init__(self, train_data, test_data, max_bins, lambda_val, gamma):
         # Guassian Kernal Regression Model
-        lambda_val = 0.1
-        gamma = 0.001
+        self.lambda_val = lambda_val
+        self.gamma = gamma
         self.rrg = kernel_ridge.KernelRidge(alpha=lambda_val, kernel='rbf', gamma=gamma)\
         # Initialize max bins
         self.bins_size = len(max_bins)
@@ -43,8 +43,8 @@ class BanditMDP:
         # Goal state
         self.goal_samples = 0
         # MDP Parameters
-        self.alpha = 1
-        self.epsilon = 0.8
+        self.alpha = 0.9
+        self.epsilon = 0.50
         self.rng = random.Random()
         
     """
@@ -64,7 +64,7 @@ class BanditMDP:
                     y.append(self.Y_train[i][j])
                 
         return np.array(x),np.array(y)
-
+        
     """
     Preform a state transition based on a given action
     Parameter:
@@ -85,8 +85,6 @@ class BanditMDP:
     """
     def reward(self, curr_state):
         x_train, y_train = self.get_data(curr_state)
-        if x_train.size == 0:
-            return 0
         self.rrg.fit(x_train, y_train)
         y_pred = self.rrg.predict(self.X_test)
         mae = np.mean(np.abs(self.Y_test-y_pred))
@@ -128,6 +126,7 @@ class BanditMDP:
     """
     def q_update(self, action):
         next_state = self.transition(action)
+        #self.get_data(self.state, next_state)
         index = self.action_to_index[action]
 
         if next_state not in self.q_table.keys():
@@ -157,7 +156,8 @@ class BanditMDP:
             index = np.argmax(np.array(self.q_table[self.state]))
             return self.operators[index]
         else:
-            return self.rng.choice(self.operators)
+            valid_op = [operator for operator in self.operators if self.state.can_move(operator, self.max_bins)]
+            return self.rng.choice(valid_op)
 
     """
     Run one iteration of q-learning algorithm and update q-table accordingly
@@ -187,7 +187,6 @@ class BanditMDP:
                 break
             state_list.add(curr_state)
         print('Solution State', curr_state.bins)
-        print('Accuracy', self.reward(curr_state))
         return curr_state.bins
         
 class BanditState:
