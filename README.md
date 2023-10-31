@@ -9,7 +9,7 @@ The problem of finding the most meaningful blocks to train a model can treated a
   <img src="https://github.com/hhuynh000/Parking-Occupancy-Model/blob/main/figures/state_space.png" width="400"/>
 </p>
 <p align="center">
-  Figure 2. K-mean Clustering on Naive Parking Occupancy
+  Figure 1. Example State Diagram for 2 Bins with 2 Data Samples each
 </p>
 
 ## Implementation
